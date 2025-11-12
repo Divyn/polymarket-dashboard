@@ -547,6 +547,8 @@ export function getTradesForMarket(conditionId: string) {
 
 // Check if any table is empty
 export function areTablesEmpty(): boolean {
+  // Force checkpoint to ensure WAL writes are visible
+  checkpointDatabase();
   const db = getDb();
   
   const tokenRegCount = db.prepare('SELECT COUNT(*) as count FROM token_registered_events').get() as { count: number };
