@@ -180,10 +180,16 @@ async function processTokenRegisteredEvents(isInitialSync: boolean = false) {
 
 async function processOrderFilledEvents(isInitialSync: boolean = false) {
   const prefix = isInitialSync ? '[Initial Sync]' : '[Polling]';
-  console.log(`\n${prefix} 💰 Processing OrderFilled events...`);
+  // Reduced logging - only log start for initial sync
+  if (isInitialSync) {
+    console.log(`${prefix} 💰 Processing OrderFilled events...`);
+  }
   try {
     const events = await fetchOrderFilledEvents(10000);
-    console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    // Reduced logging - only log if many events
+    if (events.length > 100 || isInitialSync) {
+      console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    }
     let count = 0;
     let skipped = 0;
     for (const event of events) {
@@ -229,10 +235,16 @@ async function processOrderFilledEvents(isInitialSync: boolean = false) {
 
 async function processConditionPreparationEvents(isInitialSync: boolean = false) {
   const prefix = isInitialSync ? '[Initial Sync]' : '[Polling]';
-  console.log(`\n${prefix} 🔗 Processing ConditionPreparation events...`);
+  // Reduced logging - only log start for initial sync
+  if (isInitialSync) {
+    console.log(`${prefix} 🔗 Processing ConditionPreparation events...`);
+  }
   try {
     const events = await fetchConditionPreparationEvents(10000);
-    console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    // Reduced logging - only log if many events
+    if (events.length > 100 || isInitialSync) {
+      console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    }
     let count = 0;
     let skipped = 0;
     for (const event of events) {
@@ -270,10 +282,16 @@ async function processConditionPreparationEvents(isInitialSync: boolean = false)
 
 async function processQuestionInitializedEvents(isInitialSync: boolean = false) {
   const prefix = isInitialSync ? '[Initial Sync]' : '[Polling]';
-  console.log(`\n${prefix} 📋 Processing QuestionInitialized events...`);
+  // Reduced logging - only log start for initial sync
+  if (isInitialSync) {
+    console.log(`${prefix} 📋 Processing QuestionInitialized events...`);
+  }
   try {
     const events = await fetchQuestionInitializedEvents(10000);
-    console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    // Reduced logging - only log if many events
+    if (events.length > 100 || isInitialSync) {
+      console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    }
     let count = 0;
     let skipped = 0;
     for (const event of events) {
@@ -436,12 +454,8 @@ export function startPolling() {
   }
 
   isPolling = true;
-  console.log('\n[Polling] 🚀 Starting scheduled polling system...');
-  console.log('[Polling] 📅 Schedule:');
-  console.log('  - TokenRegistered: Every 5 minutes');
-  console.log('  - OrderFilled: Every 1 minute');
-  console.log('  - ConditionPreparation: Every 15 minutes');
-  console.log('  - QuestionInitialized: Every 15 minutes\n');
+  console.log('[Polling] 🚀 Starting scheduled polling system...');
+  // Reduced logging - removed schedule details to avoid rate limits
 
   // Run initial sync if tables are empty
   runInitialSync();
@@ -461,11 +475,7 @@ export function startPolling() {
 
   // OrderFilled: Every 1 minute - queue for sequential execution with retry
   cron.schedule('* * * * *', () => {
-    const now = new Date().toISOString();
-    // Reduced logging - only log first scheduled job
-    if (Math.random() < 0.1) {
-      console.log(`[Polling] ⏰ OrderFilled scheduled (every 1 min)`);
-    }
+    // Reduced logging - removed scheduled job logging to avoid rate limits
     enqueueQuery(
       () => processOrderFilledEvents(),
       { name: 'OrderFilled (Polling)', maxRetries: 3 }
@@ -474,11 +484,7 @@ export function startPolling() {
 
   // ConditionPreparation: Every 15 minutes - queue for sequential execution with retry
   cron.schedule('*/15 * * * *', () => {
-    const now = new Date().toISOString();
-    // Reduced logging - only log first scheduled job
-    if (Math.random() < 0.1) {
-      console.log(`[Polling] ⏰ ConditionPreparation scheduled (every 15 min)`);
-    }
+    // Reduced logging - removed scheduled job logging to avoid rate limits
     enqueueQuery(
       () => processConditionPreparationEvents(),
       { name: 'ConditionPreparation (Polling)', maxRetries: 3 }
@@ -487,11 +493,7 @@ export function startPolling() {
 
   // QuestionInitialized: Every 15 minutes - queue for sequential execution with retry
   cron.schedule('*/15 * * * *', () => {
-    const now = new Date().toISOString();
-    // Reduced logging - only log first scheduled job
-    if (Math.random() < 0.1) {
-      console.log(`[Polling] ⏰ QuestionInitialized scheduled (every 15 min)`);
-    }
+    // Reduced logging - removed scheduled job logging to avoid rate limits
     enqueueQuery(
       () => processQuestionInitializedEvents(),
       { name: 'QuestionInitialized (Polling)', maxRetries: 3 }
