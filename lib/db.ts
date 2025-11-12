@@ -353,6 +353,20 @@ export function getMarketsWithDataAndTrades() {
   checkpointDatabase();
   const db = getDb();
   const startTime = Date.now();
+  
+  // Debug: Check counts before query
+  const totalQuestions = db.prepare('SELECT COUNT(*) as c FROM question_initialized_events').get() as { c: number };
+  const totalConditions = db.prepare('SELECT COUNT(*) as c FROM condition_preparation_events').get() as { c: number };
+  const withDecoded = db.prepare(`
+    SELECT COUNT(*) as c 
+    FROM question_initialized_events 
+    WHERE ancillary_data_decoded IS NOT NULL 
+      AND ancillary_data_decoded != '' 
+      AND ancillary_data_decoded != 'null'
+  `).get() as { c: number };
+  
+  console.log(`[DB] Query stats - Questions: ${totalQuestions.c}, Conditions: ${totalConditions.c}, With decoded: ${withDecoded.c}`);
+  
   // Get all markets with decoded data and their related condition/token info
   // Relationship: question_id -> condition_id -> token0/token1
   // Use LEFT JOIN for token_registered_events so markets show even without tokens
@@ -375,6 +389,9 @@ export function getMarketsWithDataAndTrades() {
     ORDER BY q.block_time DESC
     LIMIT 500
   `).all();
+  
+  console.log(`[DB] Markets query returned ${results.length} results`);
+  
   return results;
 }
 
