@@ -294,9 +294,11 @@ async function processQuestionInitializedEvents(isInitialSync: boolean = false) 
 async function runInitialSync() {
   // Only skip if ALL tables are filled
   if (areAllTablesFilled()) {
+    console.log('[Initial Sync] ⏭️  Skipping - all tables already filled');
     return;
   }
 
+  console.log('[Initial Sync] 🚀 Starting initial data sync...');
   isInitialSyncInProgress = true;
   initialSyncStartTime = Date.now();
   
