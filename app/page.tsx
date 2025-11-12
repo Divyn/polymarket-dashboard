@@ -31,6 +31,8 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [showDebug, setShowDebug] = useState(false);
   
   // Timeout to prevent infinite loading
   useEffect(() => {
@@ -88,10 +90,31 @@ export default function Home() {
       
       const data = await response.json();
       
+      // Debug logging
+      console.log('[Frontend] 📊 API Response:', {
+        success: data.success,
+        dataLength: data.data?.length || 0,
+        count: data.count,
+        with_trades: data.with_trades,
+        without_trades: data.without_trades,
+        firstMarket: data.data?.[0] || null,
+        fullResponse: data
+      });
+      
+      setDebugInfo({
+        timestamp: new Date().toISOString(),
+        apiResponse: data,
+        marketsCount: data.data?.length || 0,
+        withTrades: data.with_trades || 0,
+        withoutTrades: data.without_trades || 0
+      });
+      
       if (data.success && Array.isArray(data.data)) {
+        console.log(`[Frontend] ✅ Setting ${data.data.length} markets`);
         setMarkets(data.data);
         setError(null);
       } else {
+        console.error('[Frontend] ❌ Invalid response format:', data);
         setError(data.error || 'Invalid response format');
         setMarkets([]);
       }
@@ -137,6 +160,12 @@ export default function Home() {
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">Polymarket Markets</h1>
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setShowDebug(!showDebug)}
+              className="px-3 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded text-gray-700"
+            >
+              {showDebug ? 'Hide' : 'Show'} Debug
+            </button>
             {loading && markets.length === 0 && (
               <div className="flex items-center gap-2">
                 <LoadingSpinner />
@@ -150,6 +179,89 @@ export default function Home() {
             )}
           </div>
         </div>
+
+        {/* Debug Panel */}
+        {showDebug && (
+          <div className="bg-gray-900 text-green-400 p-4 rounded-lg mb-6 font-mono text-xs overflow-auto max-h-96">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-sm font-bold text-white">Debug Information</h3>
+              <button
+                onClick={() => {
+                  fetchMarkets();
+                  fetchSyncStatus();
+                }}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs"
+              >
+                Refresh
+              </button>
+            </div>
+            <div className="space-y-2">
+              <div>
+                <span className="text-gray-500">Loading:</span> {loading ? 'true' : 'false'}
+              </div>
+              <div>
+                <span className="text-gray-500">Error:</span> {error || 'null'}
+              </div>
+              <div>
+                <span className="text-gray-500">Markets Count:</span> {markets.length}
+              </div>
+              {debugInfo && (
+                <>
+                  <div>
+                    <span className="text-gray-500">Last API Call:</span> {debugInfo.timestamp}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">API Markets Count:</span> {debugInfo.marketsCount}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">With Trades:</span> {debugInfo.withTrades}
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Without Trades:</span> {debugInfo.withoutTrades}
+                  </div>
+                  <details className="mt-2">
+                    <summary className="cursor-pointer text-yellow-400 hover:text-yellow-300">
+                      Full API Response
+                    </summary>
+                    <pre className="mt-2 p-2 bg-gray-800 rounded overflow-auto">
+                      {JSON.stringify(debugInfo.apiResponse, null, 2)}
+                    </pre>
+                  </details>
+                  {debugInfo.apiResponse?.data?.[0] && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-yellow-400 hover:text-yellow-300">
+                        First Market Sample
+                      </summary>
+                      <pre className="mt-2 p-2 bg-gray-800 rounded overflow-auto">
+                        {JSON.stringify(debugInfo.apiResponse.data[0], null, 2)}
+                      </pre>
+                    </details>
+                  )}
+                </>
+              )}
+              {syncStatus && (
+                <details className="mt-2">
+                  <summary className="cursor-pointer text-yellow-400 hover:text-yellow-300">
+                    Sync Status
+                  </summary>
+                  <pre className="mt-2 p-2 bg-gray-800 rounded overflow-auto">
+                    {JSON.stringify(syncStatus, null, 2)}
+                  </pre>
+                </details>
+              )}
+              <div className="mt-2 pt-2 border-t border-gray-700">
+                <a
+                  href="/api/debug"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-400 hover:text-blue-300 underline"
+                >
+                  View Full Debug API →
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Show sync status if in progress */}
         {syncStatus?.inProgress && (

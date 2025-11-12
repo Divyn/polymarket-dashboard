@@ -47,17 +47,31 @@ function doesTradeMatchTokens(trade: any, token0: string | null, token1: string 
 export async function GET() {
   const startTime = Date.now();
   try {
+    console.log('[API] 📥 GET /api/markets - Starting request');
+    
     // Get markets with token info
     // Note: WAL mode allows concurrent reads during writes, so no checkpoint needed
     // This enables fast response times while background writes happen in parallel
     const markets = getMarketsWithDataAndTrades();
     
     // Log for debugging
+    console.log(`[API] 📊 Raw markets from DB: ${markets.length} markets`);
     if (markets.length === 0) {
-      console.error('[API]  No markets returned from getMarketsWithDataAndTrades()');
+      console.error('[API] ⚠️  No markets returned from getMarketsWithDataAndTrades()');
       console.error('[API] This might indicate an empty database or missing data');
+      console.error('[API] Check if ancillary_data_decoded is populated in question_initialized_events');
     } else {
-      console.log(`[API] Found ${markets.length} markets`);
+      console.log(`[API] ✅ Found ${markets.length} markets from database`);
+      if (markets.length > 0) {
+        const sample = markets[0] as any;
+        console.log(`[API] Sample market:`, {
+          question_id: sample.question_id,
+          has_ancillary: !!sample.ancillary_data_decoded,
+          ancillary_length: sample.ancillary_data_decoded?.length || 0,
+          has_condition: !!sample.condition_id,
+          has_tokens: !!(sample.token0 || sample.token1)
+        });
+      }
     }
     
     // Get all trades for filtering (limit to recent trades for performance)
@@ -150,12 +164,21 @@ export async function GET() {
     const marketsWithTrades = allMarkets.filter((m: any) => m.trade_count > 0);
     const marketsWithoutTrades = allMarkets.filter((m: any) => m.trade_count === 0);
     
+    const duration = Date.now() - startTime;
+    console.log(`[API] ✅ Returning ${allMarkets.length} markets (${marketsWithTrades.length} with trades, ${marketsWithoutTrades.length} without) in ${duration}ms`);
+    
     return NextResponse.json({
       success: true,
       data: allMarkets,
       count: allMarkets.length,
       with_trades: marketsWithTrades.length,
       without_trades: marketsWithoutTrades.length,
+      debug: {
+        raw_markets_from_db: markets.length,
+        processed_markets: allMarkets.length,
+        all_trades_count: allTrades.length,
+        duration_ms: duration
+      }
     });
   } catch (error) {
     console.error(`[API] ❌ GET /api/markets - Error:`, error);

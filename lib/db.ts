@@ -34,7 +34,15 @@ export function getDb(): Database.Database {
       mkdirSync(dbDir, { recursive: true });
     }
     
+    const isPersistentVolume = dbPath.startsWith('/data');
     console.log(`[DB] Initializing database connection at: ${dbPath}`);
+    if (isPersistentVolume) {
+      console.log(`[DB] 💾 Using persistent volume - data will survive deployments`);
+    } else {
+      console.log(`[DB] ⚠️  Using local storage - data will be lost on deployment`);
+      console.log(`[DB] 💡 To persist data on Railway, mount a volume at /data`);
+    }
+    
     db = new Database(dbPath, {
       // Enable WAL mode for better concurrency
       // timeout option allows retries if database is locked
@@ -45,10 +53,24 @@ export function getDb(): Database.Database {
     db.pragma('busy_timeout = 5000');
     initializeDatabase(db);
     
-    // Log initial table counts to verify connection
+    // Log initial table counts to verify connection and persistence
     try {
       const testCount = db.prepare('SELECT COUNT(*) as c FROM question_initialized_events').get() as { c: number };
-      console.log(`[DB] Database initialized. Initial question count: ${testCount.c}`);
+      const condCount = db.prepare('SELECT COUNT(*) as c FROM condition_preparation_events').get() as { c: number };
+      const tokenCount = db.prepare('SELECT COUNT(*) as c FROM token_registered_events').get() as { c: number };
+      const tradeCount = db.prepare('SELECT COUNT(*) as c FROM order_filled_events').get() as { c: number };
+      
+      console.log(`[DB] Database initialized. Table counts:`);
+      console.log(`[DB]   - Questions: ${testCount.c}`);
+      console.log(`[DB]   - Conditions: ${condCount.c}`);
+      console.log(`[DB]   - Tokens: ${tokenCount.c}`);
+      console.log(`[DB]   - Trades: ${tradeCount.c}`);
+      
+      if (testCount.c > 0 || condCount.c > 0) {
+        console.log(`[DB] ✅ Found existing data - will skip initial sync if all tables are filled`);
+      } else {
+        console.log(`[DB] 📊 Database is empty - initial sync will run`);
+      }
     } catch (error) {
       console.error('[DB] Error checking initial count:', error);
     }

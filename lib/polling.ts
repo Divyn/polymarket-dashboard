@@ -310,10 +310,14 @@ async function processQuestionInitializedEvents(isInitialSync: boolean = false) 
 // Initial sync function - runs all queries in parallel for faster loading
 async function runInitialSync() {
   // Only skip if ALL tables are filled
-  if (areAllTablesFilled()) {
+  const allFilled = areAllTablesFilled();
+  if (allFilled) {
     console.log('[Initial Sync] ⏭️  Skipping - all tables already filled');
+    console.log('[Initial Sync] 💾 Using existing data from persistent volume');
     return;
   }
+  
+  console.log('[Initial Sync] 📊 Database check: Tables need data, starting sync...');
 
   console.log('[Initial Sync] 🚀 Starting initial data sync (parallel mode)...');
   isInitialSyncInProgress = true;
@@ -444,7 +448,14 @@ export function startPolling() {
   const tablesEmpty = areTablesEmpty();
   const allTablesFilled = areAllTablesFilled();
   console.log(`[Polling] Tables empty: ${tablesEmpty}, All filled: ${allTablesFilled}`);
-  runInitialSync();
+  
+  if (allTablesFilled) {
+    console.log('[Polling] ✅ Database already has data - skipping initial sync');
+    console.log('[Polling] 💾 Data will persist across deployments if Railway volume is mounted at /data');
+  } else {
+    console.log('[Polling] 🔄 Starting initial sync - database appears empty or incomplete');
+    runInitialSync();
+  }
 
   // All queries run every 60 minutes - queue for sequential execution with retry
   // TokenRegistered: Every 60 minutes
