@@ -382,6 +382,9 @@ export function getMarketsWithDataAndTrades() {
     const checkpointResult = db.pragma('wal_checkpoint(TRUNCATE)', { simple: true });
     if (checkpointResult !== 0) {
       console.error(`[DB] Checkpoint returned ${checkpointResult} (may have active transactions)`);
+    } else {
+      // Force a read to ensure checkpoint is applied
+      db.pragma('wal_checkpoint(RESTART)');
     }
   } catch (error: any) {
     // Checkpoint failed - continue anyway, WAL mode allows concurrent reads
