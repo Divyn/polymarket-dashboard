@@ -561,9 +561,9 @@ export function areTablesEmpty(): boolean {
   
   console.log(`[DB] 📊 Table counts: TokenRegistered=${tokenRegCount.count}, OrderFilled=${orderFilledCount.count}, ConditionPrep=${condPrepCount.count}, QuestionInit=${questionInitCount.count}`);
   
+  // Only require QuestionInitialized and ConditionPreparation to have markets
+  // TokenRegistered and OrderFilled are optional (markets can show without trades)
   const isEmpty = (
-    tokenRegCount.count === 0 ||
-    orderFilledCount.count === 0 ||
     condPrepCount.count === 0 ||
     questionInitCount.count === 0
   );
