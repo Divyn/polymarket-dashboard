@@ -406,10 +406,11 @@ export function getMarketsWithDataAndTrades() {
   
   // Get all markets with decoded data and their related condition/token info
   // Relationship: question_id -> condition_id -> token0/token1
-  // Use LEFT JOIN for token_registered_events so markets show even without tokens
-  // Relationship: question_id -> condition_id -> token0/token1 (optional)
+  // Use LEFT JOIN for both condition_preparation_events and token_registered_events
+  // so markets show even if they don't have conditions or tokens yet
   // Note: WAL mode allows concurrent reads even during writes, so this should work
-  const results = db.prepare(`
+  // Try with decoded data first (preferred)
+  let results = db.prepare(`
     SELECT DISTINCT
       q.question_id,
       q.ancillary_data_decoded,
@@ -419,7 +420,7 @@ export function getMarketsWithDataAndTrades() {
       t.token0,
       t.token1
     FROM question_initialized_events q
-    INNER JOIN condition_preparation_events c ON q.question_id = c.question_id
+    LEFT JOIN condition_preparation_events c ON q.question_id = c.question_id
     LEFT JOIN token_registered_events t ON c.condition_id = t.condition_id
     WHERE q.ancillary_data_decoded IS NOT NULL
       AND q.ancillary_data_decoded != ''
@@ -427,6 +428,39 @@ export function getMarketsWithDataAndTrades() {
     ORDER BY q.block_time DESC
     LIMIT 500
   `).all();
+  
+  // If no results with decoded data, try without that requirement to see what we have
+  if (results.length === 0) {
+    console.log(`[DB] ⚠️  No markets with decoded data found, checking all questions...`);
+    const allQuestions = db.prepare(`
+      SELECT COUNT(*) as c FROM question_initialized_events
+    `).get() as { c: number };
+    const questionsWithoutDecoded = db.prepare(`
+      SELECT COUNT(*) as c FROM question_initialized_events
+      WHERE ancillary_data_decoded IS NULL 
+         OR ancillary_data_decoded = '' 
+         OR ancillary_data_decoded = 'null'
+    `).get() as { c: number };
+    console.log(`[DB] Total questions: ${allQuestions.c}, Without decoded: ${questionsWithoutDecoded.c}`);
+    
+    // Fallback: show markets even without decoded data (for debugging)
+    results = db.prepare(`
+      SELECT DISTINCT
+        q.question_id,
+        q.ancillary_data_decoded,
+        q.block_time as question_time,
+        c.condition_id,
+        c.outcome_slot_count,
+        t.token0,
+        t.token1
+      FROM question_initialized_events q
+      LEFT JOIN condition_preparation_events c ON q.question_id = c.question_id
+      LEFT JOIN token_registered_events t ON c.condition_id = t.condition_id
+      ORDER BY q.block_time DESC
+      LIMIT 500
+    `).all();
+    console.log(`[DB] Fallback query (without decoded requirement) returned ${results.length} results`);
+  }
   
   console.log(`[DB] Markets query returned ${results.length} results`);
   
