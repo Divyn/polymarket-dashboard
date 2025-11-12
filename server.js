@@ -14,17 +14,40 @@ const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
 
 // Set a timeout for app preparation to avoid hanging
-const PREPARE_TIMEOUT = 60000; // 60 seconds
+const PREPARE_TIMEOUT = 90000; // 90 seconds (increased for Railway)
 let prepareTimeout;
+
+// Start a simple HTTP server immediately to respond to health checks
+// This prevents Railway from killing the container while Next.js prepares
+const tempServer = createServer((req, res) => {
+  if (req.url === '/api/health' || req.url === '/health') {
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'starting', timestamp: new Date().toISOString() }));
+  } else {
+    res.writeHead(503, { 'Content-Type': 'text/plain' });
+    res.end('Server is starting...');
+  }
+});
+
+tempServer.listen(port, hostname, () => {
+  console.log(`[Server] ⏳ Temporary server listening on ${hostname}:${port} (Next.js preparing...)`);
+});
 
 prepareTimeout = setTimeout(() => {
   console.error('App preparation timeout - exiting');
+  tempServer.close();
   process.exit(1);
 }, PREPARE_TIMEOUT);
 
 app.prepare().then(() => {
   // Clear timeout since preparation succeeded
   clearTimeout(prepareTimeout);
+  
+  // Close temporary server and start real server
+  tempServer.close(() => {
+    console.log('[Server] ✅ Next.js ready, switching to real server...');
+  });
+  
   const server = createServer(async (req, res) => {
     try {
       const parsedUrl = parse(req.url, true);

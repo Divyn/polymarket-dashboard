@@ -2,12 +2,14 @@ import type { Metadata } from "next";
 import "./globals.css";
 // Trigger initialization by importing the init route
 // This ensures it loads when Next.js prepares the app, but doesn't block
+// Use setTimeout to defer initialization until after server is ready
 if (typeof window === 'undefined') {
-  // Import the init route module - it will auto-initialize when loaded
-  // Use dynamic import to avoid blocking
-  import('@/app/api/init/route').catch(() => {
-    // Silently fail - initialization will happen when route is accessed
-  });
+  // Defer initialization to avoid blocking server startup
+  setTimeout(() => {
+    import('@/app/api/init/route').catch(() => {
+      // Silently fail - initialization will happen when route is accessed
+    });
+  }, 5000); // Wait 5 seconds after server starts
 }
 
 export const metadata: Metadata = {
