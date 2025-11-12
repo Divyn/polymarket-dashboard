@@ -42,6 +42,17 @@ export function getDb(): Database.Database {
   return db;
 }
 
+// Force WAL checkpoint to ensure all writes are visible
+// This is important for WAL mode where writes go to WAL file first
+export function checkpointDatabase(): void {
+  const database = getDb();
+  try {
+    database.pragma('wal_checkpoint(TRUNCATE)');
+  } catch (error) {
+    // Ignore checkpoint errors - not critical
+  }
+}
+
 function initializeDatabase(database: Database.Database) {
   // TokenRegistered events table
   database.exec(`

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb, areTablesEmpty, areAllTablesFilled, dbPath } from '@/lib/db';
+import { getDb, areTablesEmpty, areAllTablesFilled, dbPath, checkpointDatabase } from '@/lib/db';
 import { getInitialSyncStatus } from '@/lib/polling';
 import { getBitqueryOAuthToken } from '@/lib/env';
 import { existsSync } from 'fs';
@@ -7,6 +7,8 @@ import { resolve } from 'path';
 
 export async function GET() {
   try {
+    // Force checkpoint to ensure WAL writes are visible
+    checkpointDatabase();
     const db = getDb();
     
     // Get table counts

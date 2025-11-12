@@ -19,6 +19,7 @@ import {
   insertQuestionInitializedEvent,
   areTablesEmpty,
   areAllTablesFilled,
+  checkpointDatabase,
 } from './db';
 import { decodeAndParseAncillaryData } from './decoder';
 
@@ -365,6 +366,9 @@ async function runInitialSync() {
   try {
     // Wait for all queries to complete (they'll execute sequentially via queue)
     await Promise.all(promises);
+    
+    // Force WAL checkpoint after initial sync to ensure data is visible
+    checkpointDatabase();
 
   } catch (error) {
     console.error('[Initial Sync] ❌ Error during initial sync:', error);
