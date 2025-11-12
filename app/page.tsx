@@ -18,6 +18,12 @@ interface SyncStatus {
   duration: number;
   tablesEmpty: boolean;
   needsSync: boolean;
+  progress?: {
+    questionInit: { completed: boolean; count: number };
+    condPrep: { completed: boolean; count: number };
+    tokenReg: { completed: boolean; count: number };
+    orderFilled: { completed: boolean; count: number };
+  };
 }
 
 export default function Home() {
@@ -146,23 +152,53 @@ export default function Home() {
         </div>
 
         {/* Show sync status if in progress */}
-        {syncStatus?.inProgress && markets.length === 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 text-center mb-8">
+        {syncStatus?.inProgress && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8 mb-8">
             <div className="flex flex-col items-center justify-center space-y-4">
               <LoadingSpinner />
-              <div>
-                <h2 className="text-xl font-semibold text-blue-900 mb-2">
+              <div className="w-full">
+                <h2 className="text-xl font-semibold text-blue-900 mb-2 text-center">
                   Loading Initial Data
                 </h2>
-                <p className="text-blue-700 mb-4">
-                  We&apos;re fetching market data from the blockchain. This may take a few minutes...
+                <p className="text-blue-700 mb-4 text-center">
+                  Fetching market data from the blockchain (running in parallel for faster loading)...
                 </p>
-                <div className="text-sm text-blue-600">
-                  <p>Fetching events: TokenRegistered, OrderFilled, ConditionPreparation, QuestionInitialized</p>
-                  {syncStatus.duration > 0 && (
-                    <p className="mt-2">Time elapsed: {syncStatus.duration}s</p>
-                  )}
-                </div>
+                {syncStatus.progress && (
+                  <div className="space-y-2 mt-4">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-800">QuestionInitialized:</span>
+                      <span className={syncStatus.progress.questionInit.completed ? 'text-green-600 font-semibold' : 'text-blue-600'}>
+                        {syncStatus.progress.questionInit.completed ? `✅ ${syncStatus.progress.questionInit.count} events` : '⏳ Loading...'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-800">ConditionPreparation:</span>
+                      <span className={syncStatus.progress.condPrep.completed ? 'text-green-600 font-semibold' : 'text-blue-600'}>
+                        {syncStatus.progress.condPrep.completed ? `✅ ${syncStatus.progress.condPrep.count} events` : '⏳ Loading...'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-800">TokenRegistered:</span>
+                      <span className={syncStatus.progress.tokenReg.completed ? 'text-green-600 font-semibold' : 'text-blue-600'}>
+                        {syncStatus.progress.tokenReg.completed ? `✅ ${syncStatus.progress.tokenReg.count} events` : '⏳ Loading...'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-blue-800">OrderFilled:</span>
+                      <span className={syncStatus.progress.orderFilled.completed ? 'text-green-600 font-semibold' : 'text-blue-600'}>
+                        {syncStatus.progress.orderFilled.completed ? `✅ ${syncStatus.progress.orderFilled.count} events` : '⏳ Loading...'}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                {syncStatus.duration > 0 && (
+                  <p className="text-sm text-blue-600 mt-4 text-center">Time elapsed: {syncStatus.duration}s</p>
+                )}
+                {markets.length > 0 && (
+                  <p className="text-sm text-green-700 mt-4 text-center font-semibold">
+                    🎉 Markets are available! Showing {markets.length} markets below (trades may still be loading...)
+                  </p>
+                )}
               </div>
             </div>
           </div>

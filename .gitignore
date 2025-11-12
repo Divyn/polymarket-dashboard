@@ -55,3 +55,4 @@ polymarket.db.copy
 .env*.local
 
 
+package-lock.json

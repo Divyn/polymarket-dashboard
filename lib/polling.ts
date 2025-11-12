@@ -26,6 +26,12 @@ import { decodeAndParseAncillaryData } from './decoder';
 let isPolling = false;
 let isInitialSyncInProgress = false;
 let initialSyncStartTime: number | null = null;
+let syncProgress: { [key: string]: { completed: boolean; count: number } } = {
+  questionInit: { completed: false, count: 0 },
+  condPrep: { completed: false, count: 0 },
+  tokenReg: { completed: false, count: 0 },
+  orderFilled: { completed: false, count: 0 },
+};
 
 // Queue system to ensure queries run sequentially
 interface QueuedQuery {
@@ -301,7 +307,7 @@ async function processQuestionInitializedEvents(isInitialSync: boolean = false) 
   }
 }
 
-// Initial sync function - runs all queries if any table is empty
+// Initial sync function - runs all queries in parallel for faster loading
 async function runInitialSync() {
   // Only skip if ALL tables are filled
   if (areAllTablesFilled()) {
@@ -309,9 +315,17 @@ async function runInitialSync() {
     return;
   }
 
-  console.log('[Initial Sync] 🚀 Starting initial data sync...');
+  console.log('[Initial Sync] 🚀 Starting initial data sync (parallel mode)...');
   isInitialSyncInProgress = true;
   initialSyncStartTime = Date.now();
+  
+  // Reset progress tracking
+  syncProgress = {
+    questionInit: { completed: false, count: 0 },
+    condPrep: { completed: false, count: 0 },
+    tokenReg: { completed: false, count: 0 },
+    orderFilled: { completed: false, count: 0 },
+  };
   
   // Store results to track progress
   const results: { [key: string]: number } = {
@@ -321,64 +335,79 @@ async function runInitialSync() {
     questionInit: 0,
   };
 
-  // Create promises that will resolve when each query completes
+  // Run all queries in parallel - they're independent blockchain queries
+  // SQLite WAL mode handles concurrent writes safely
   const promises: Promise<void>[] = [];
 
-  // Queue TokenRegistered query with retry
+  // QuestionInitialized - can run in parallel
   promises.push(
-    new Promise<void>((resolve) => {
-      enqueueQuery(
-        async () => {
-          results.tokenReg = await processTokenRegisteredEvents(true);
-          resolve();
-        },
-        { name: 'TokenRegistered (Initial Sync)', maxRetries: 3 }
-      );
-    })
+    (async () => {
+      try {
+        syncProgress.questionInit.completed = false;
+        results.questionInit = await processQuestionInitializedEvents(true);
+        syncProgress.questionInit.completed = true;
+        syncProgress.questionInit.count = results.questionInit;
+        console.log(`[Initial Sync] ✅ QuestionInitialized completed: ${results.questionInit} events`);
+      } catch (error) {
+        console.error('[Initial Sync] ❌ QuestionInitialized failed:', error);
+        syncProgress.questionInit.completed = true; // Mark as done even on error
+      }
+    })()
   );
 
-  // Queue OrderFilled query (will execute after TokenRegistered completes)
+  // ConditionPreparation - can run in parallel
   promises.push(
-    new Promise<void>((resolve) => {
-      enqueueQuery(
-        async () => {
-          results.orderFilled = await processOrderFilledEvents(true);
-          resolve();
-        },
-        { name: 'OrderFilled (Initial Sync)', maxRetries: 3 }
-      );
-    })
+    (async () => {
+      try {
+        syncProgress.condPrep.completed = false;
+        results.condPrep = await processConditionPreparationEvents(true);
+        syncProgress.condPrep.completed = true;
+        syncProgress.condPrep.count = results.condPrep;
+        console.log(`[Initial Sync] ✅ ConditionPreparation completed: ${results.condPrep} events`);
+      } catch (error) {
+        console.error('[Initial Sync] ❌ ConditionPreparation failed:', error);
+        syncProgress.condPrep.completed = true;
+      }
+    })()
   );
 
-  // Queue ConditionPreparation query (will execute after OrderFilled completes)
+  // TokenRegistered - can run in parallel (will match condition_ids as they're inserted)
   promises.push(
-    new Promise<void>((resolve) => {
-      enqueueQuery(
-        async () => {
-          results.condPrep = await processConditionPreparationEvents(true);
-          resolve();
-        },
-        { name: 'ConditionPreparation (Initial Sync)', maxRetries: 3 }
-      );
-    })
+    (async () => {
+      try {
+        syncProgress.tokenReg.completed = false;
+        results.tokenReg = await processTokenRegisteredEvents(true);
+        syncProgress.tokenReg.completed = true;
+        syncProgress.tokenReg.count = results.tokenReg;
+        console.log(`[Initial Sync] ✅ TokenRegistered completed: ${results.tokenReg} events`);
+      } catch (error) {
+        console.error('[Initial Sync] ❌ TokenRegistered failed:', error);
+        syncProgress.tokenReg.completed = true;
+      }
+    })()
   );
 
-  // Queue QuestionInitialized query (will execute after ConditionPreparation completes)
+  // OrderFilled - can run in parallel (independent)
   promises.push(
-    new Promise<void>((resolve) => {
-      enqueueQuery(
-        async () => {
-          results.questionInit = await processQuestionInitializedEvents(true);
-          resolve();
-        },
-        { name: 'QuestionInitialized (Initial Sync)', maxRetries: 3 }
-      );
-    })
+    (async () => {
+      try {
+        syncProgress.orderFilled.completed = false;
+        results.orderFilled = await processOrderFilledEvents(true);
+        syncProgress.orderFilled.completed = true;
+        syncProgress.orderFilled.count = results.orderFilled;
+        console.log(`[Initial Sync] ✅ OrderFilled completed: ${results.orderFilled} events`);
+      } catch (error) {
+        console.error('[Initial Sync] ❌ OrderFilled failed:', error);
+        syncProgress.orderFilled.completed = true;
+      }
+    })()
   );
 
   try {
-    // Wait for all queries to complete (they'll execute sequentially via queue)
+    // Wait for all queries to complete in parallel
     await Promise.all(promises);
+    
+    console.log(`[Initial Sync] ✅ All queries completed:`, results);
     
     // Force WAL checkpoint after initial sync to ensure data is visible
     checkpointDatabase();
@@ -397,6 +426,7 @@ export function getInitialSyncStatus() {
     inProgress: isInitialSyncInProgress,
     startTime: initialSyncStartTime,
     duration: initialSyncStartTime ? Math.floor((Date.now() - initialSyncStartTime) / 1000) : 0,
+    progress: syncProgress,
   };
 }
 

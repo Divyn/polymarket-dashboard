@@ -48,15 +48,16 @@ export async function GET() {
   const startTime = Date.now();
   try {
     // Get markets with token info
-    // Note: getMarketsWithDataAndTrades() already calls checkpointDatabase() internally
+    // Note: WAL mode allows concurrent reads during writes, so no checkpoint needed
+    // This enables fast response times while background writes happen in parallel
     const markets = getMarketsWithDataAndTrades();
     
     // Log for debugging
     if (markets.length === 0) {
-      console.error('[API] ⚠️  No markets returned from getMarketsWithDataAndTrades()');
-      console.error('[API] This might indicate a WAL checkpoint issue or empty database');
+      console.error('[API]  No markets returned from getMarketsWithDataAndTrades()');
+      console.error('[API] This might indicate an empty database or missing data');
     } else {
-      console.log(`[API] ✅ Found ${markets.length} markets`);
+      console.log(`[API] Found ${markets.length} markets`);
     }
     
     // Get all trades for filtering (limit to recent trades for performance)

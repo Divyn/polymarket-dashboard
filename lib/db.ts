@@ -376,20 +376,9 @@ export function getMarketsWithDataAndTrades() {
   const db = getDb();
   const startTime = Date.now();
   
-  // Force aggressive checkpoint to ensure WAL writes are visible
-  // TRUNCATE mode forces all WAL data to be written to main database file
-  try {
-    const checkpointResult = db.pragma('wal_checkpoint(TRUNCATE)', { simple: true });
-    if (checkpointResult !== 0) {
-      console.error(`[DB] Checkpoint returned ${checkpointResult} (may have active transactions)`);
-    } else {
-      // Force a read to ensure checkpoint is applied
-      db.pragma('wal_checkpoint(RESTART)');
-    }
-  } catch (error: any) {
-    // Checkpoint failed - continue anyway, WAL mode allows concurrent reads
-    console.error('[DB] Checkpoint error:', error.message);
-  }
+  // Note: WAL mode allows concurrent reads even during writes
+  // No checkpoint needed - reads will see WAL data automatically
+  // This allows fast response times while writes happen in parallel
   
   // Debug: Check counts before query
   const totalQuestions = db.prepare('SELECT COUNT(*) as c FROM question_initialized_events').get() as { c: number };
@@ -447,15 +436,8 @@ export function getMarketsWithDataAndTrades() {
 // Get all order filled events (filtering will be done at API level)
 export function getAllOrderFilledEvents() {
   const db = getDb();
-  // Force aggressive checkpoint to ensure WAL writes are visible
-  try {
-    const checkpointResult = db.pragma('wal_checkpoint(TRUNCATE)', { simple: true });
-    if (checkpointResult !== 0) {
-      console.error(`[DB] Checkpoint returned ${checkpointResult} (may have active transactions)`);
-    }
-  } catch (error: any) {
-    console.error('[DB] Checkpoint error:', error.message);
-  }
+  // Note: WAL mode allows concurrent reads even during writes
+  // No checkpoint needed - reads will see WAL data automatically
   return db.prepare(`
     SELECT *
     FROM order_filled_events
