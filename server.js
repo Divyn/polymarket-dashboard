@@ -44,8 +44,10 @@ app.prepare().then(() => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Environment: ${dev ? 'development' : 'production'}`);
     
-    // Health check test removed - it was causing connection issues
-    // Railway will check the port directly, which is sufficient
+    // Verify server is actually listening
+    server.on('listening', () => {
+      console.log(`[Server] ✅ Server is listening on ${hostname}:${port}`);
+    });
     
     // Initialization happens automatically when Next.js loads /api/init route
     // No need to call it manually - the route module auto-initializes on load
