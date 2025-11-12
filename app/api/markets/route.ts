@@ -48,7 +48,15 @@ export async function GET() {
   const startTime = Date.now();
   try {
     // Get markets with token info
+    // Note: getMarketsWithDataAndTrades() already calls checkpointDatabase() internally
     const markets = getMarketsWithDataAndTrades();
+    
+    // Log for debugging
+    if (markets.length === 0) {
+      console.log('[API] ⚠️  No markets returned from getMarketsWithDataAndTrades()');
+    } else {
+      console.log(`[API] ✅ Found ${markets.length} markets`);
+    }
     
     // Get all trades for filtering (limit to recent trades for performance)
     const allTrades = getAllOrderFilledEvents();
