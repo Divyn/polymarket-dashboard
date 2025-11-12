@@ -44,12 +44,22 @@ export function getDb(): Database.Database {
 
 // Force WAL checkpoint to ensure all writes are visible
 // This is important for WAL mode where writes go to WAL file first
+// Note: Checkpoint can block if there are active transactions, so we use RESTART mode
+// which is less aggressive and won't block reads
 export function checkpointDatabase(): void {
   const database = getDb();
   try {
-    database.pragma('wal_checkpoint(TRUNCATE)');
-  } catch (error) {
-    // Ignore checkpoint errors - not critical
+    // Use RESTART instead of TRUNCATE to avoid blocking
+    // RESTART checkpoints the WAL but doesn't truncate it, allowing concurrent access
+    const result = database.pragma('wal_checkpoint(RESTART)', { simple: true });
+    if (result !== 0) {
+      // 0 = SQLITE_OK, non-zero means checkpoint couldn't complete (usually because of active transactions)
+      // This is OK - the data will still be readable, just might be slightly behind
+      console.log(`[DB] Checkpoint returned ${result} (may have active transactions)`);
+    }
+  } catch (error: any) {
+    // Log checkpoint errors but don't fail - data is still readable
+    console.error('[DB] Checkpoint error:', error.message);
   }
 }
 
