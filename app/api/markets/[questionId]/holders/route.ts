@@ -44,7 +44,8 @@ export async function GET(
     let token0: string | null = null;
     let token1: string | null = null;
     
-    if (tokens.length === 0 || !tokens[0].token0 || !tokens[0].token1) {
+    const tokenData = tokens[0] as any;
+    if (tokens.length === 0 || !tokenData?.token0 || !tokenData?.token1) {
       console.log(`[API] ⚠️  No tokens found in DB for conditionId, trying to fetch from API...`);
       // Try to fetch tokens from API if not in DB
       try {
