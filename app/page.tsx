@@ -198,16 +198,16 @@ export default function Home() {
         {/* Show markets or empty state */}
         {markets.length === 0 && !loading ? (
           <div className="text-center py-12">
-            {syncStatus?.needsSync ? (
+            {syncStatus?.needsSync && syncStatus?.inProgress ? (
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-yellow-800">
-                <p className="text-lg font-semibold mb-2">Initial Data Sync Required</p>
-                <p className="text-sm mb-4">The database is empty. Initial data sync will start automatically on the server.</p>
-                <p className="text-xs text-yellow-600">Please wait while we fetch market data from the blockchain...</p>
+                <p className="text-lg font-semibold mb-2">Initial Data Sync In Progress</p>
+                <p className="text-sm mb-4">Fetching market data from the blockchain. This may take a few minutes...</p>
+                <p className="text-xs text-yellow-600">Please wait while we fetch market data...</p>
               </div>
             ) : (
               <div className="text-gray-500">
                 <p className="text-lg mb-2">No markets found</p>
-                <p className="text-sm">Markets will appear here once they have both ancillary data and trades.</p>
+                <p className="text-sm">Markets will appear here once they are available.</p>
               </div>
             )}
           </div>

@@ -343,6 +343,8 @@ export function getMarketsWithDataAndTrades() {
   const startTime = Date.now();
   // Get all markets with decoded data and their related condition/token info
   // Relationship: question_id -> condition_id -> token0/token1
+  // Use LEFT JOIN for token_registered_events so markets show even without tokens
+  // Relationship: question_id -> condition_id -> token0/token1 (optional)
   const results = db.prepare(`
     SELECT DISTINCT
       q.question_id,
@@ -354,12 +356,12 @@ export function getMarketsWithDataAndTrades() {
       t.token1
     FROM question_initialized_events q
     INNER JOIN condition_preparation_events c ON q.question_id = c.question_id
-    INNER JOIN token_registered_events t ON c.condition_id = t.condition_id
+    LEFT JOIN token_registered_events t ON c.condition_id = t.condition_id
     WHERE q.ancillary_data_decoded IS NOT NULL
       AND q.ancillary_data_decoded != ''
       AND q.ancillary_data_decoded != 'null'
     ORDER BY q.block_time DESC
-    LIMIT 100
+    LIMIT 500
   `).all();
   const duration = Date.now() - startTime;
   console.log(`[DB] 📊 Query: getMarketsWithDataAndTrades() returned ${results.length} markets in ${duration}ms`);
