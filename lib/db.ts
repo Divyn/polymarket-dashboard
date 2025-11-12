@@ -390,7 +390,17 @@ export function getMarketsWithDataAndTrades() {
       AND ancillary_data_decoded != 'null'
   `).get() as { c: number };
   
-  console.log(`[DB] Query stats - Questions: ${totalQuestions.c}, Conditions: ${totalConditions.c}, With decoded: ${withDecoded.c}`);
+  // Check how many questions have matching conditions
+  const withConditions = db.prepare(`
+    SELECT COUNT(DISTINCT q.question_id) as c
+    FROM question_initialized_events q
+    INNER JOIN condition_preparation_events c ON q.question_id = c.question_id
+    WHERE q.ancillary_data_decoded IS NOT NULL 
+      AND q.ancillary_data_decoded != '' 
+      AND q.ancillary_data_decoded != 'null'
+  `).get() as { c: number };
+  
+  console.log(`[DB] Query stats - Questions: ${totalQuestions.c}, Conditions: ${totalConditions.c}, With decoded: ${withDecoded.c}, With decoded+conditions: ${withConditions.c}`);
   
   // Get all markets with decoded data and their related condition/token info
   // Relationship: question_id -> condition_id -> token0/token1
