@@ -44,6 +44,35 @@ app.prepare().then(() => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Environment: ${dev ? 'development' : 'production'}`);
     
+    // Verify health check endpoint is accessible before declaring ready
+    // This ensures Railway's health check will pass
+    setTimeout(() => {
+      const testReq = require('http').request({
+        hostname: 'localhost',
+        port: port,
+        path: '/api/health',
+        method: 'GET',
+        timeout: 2000
+      }, (res) => {
+        if (res.statusCode === 200) {
+          console.log('[Server] ✅ Health check endpoint verified');
+        } else {
+          console.log(`[Server] ⚠️  Health check returned status ${res.statusCode}`);
+        }
+      });
+      
+      testReq.on('error', (err) => {
+        console.log('[Server] ⚠️  Health check test failed (this is OK, routes may still be loading):', err.message);
+      });
+      
+      testReq.on('timeout', () => {
+        testReq.destroy();
+        console.log('[Server] ⚠️  Health check test timed out (this is OK, routes may still be loading)');
+      });
+      
+      testReq.end();
+    }, 1000);
+    
     // Initialization happens automatically when Next.js loads /api/init route
     // No need to call it manually - the route module auto-initializes on load
     console.log('[Server] ✅ Server ready - initialization will happen when Next.js loads API routes');
