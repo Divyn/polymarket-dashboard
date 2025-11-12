@@ -52,19 +52,27 @@ function sleep(ms: number): Promise<void> {
 // Process queue sequentially - only start next query after previous completes
 async function processQueue() {
   if (isProcessingQueue || queryQueue.length === 0) {
+    if (isProcessingQueue) {
+      console.log(`[Queue] ⏳ Already processing queue (${queryQueue.length} items waiting)`);
+    }
     return;
   }
 
+  console.log(`[Queue] 🚀 Starting queue processing (${queryQueue.length} items in queue)`);
   isProcessingQueue = true;
 
   while (queryQueue.length > 0) {
     const queuedQuery = queryQueue.shift();
     if (!queuedQuery) continue;
 
-    const { fn, retries, maxRetries, backoffMs } = queuedQuery;
+    const { fn, retries, maxRetries, backoffMs, name } = queuedQuery;
+    const queryName = name || 'Unknown';
+
+    console.log(`[Queue] ▶️  Processing: ${queryName} (attempt ${retries + 1}/${maxRetries + 1}, ${queryQueue.length} remaining)`);
 
     try {
       await fn();
+      console.log(`[Queue] ✅ Completed: ${queryName}`);
     } catch (error) {
       console.error(`[Queue] ❌ Query failed (attempt ${retries + 1}/${maxRetries + 1}):`, error);
       
@@ -106,6 +114,9 @@ function enqueueQuery(
     initialBackoffMs = INITIAL_BACKOFF_MS,
     name,
   } = options || {};
+
+  const queryName = name || 'Unnamed query';
+  console.log(`[Queue] ➕ Enqueuing: ${queryName} (queue size: ${queryQueue.length + 1})`);
 
   queryQueue.push({
     fn: queryFn,
