@@ -44,20 +44,9 @@ app.prepare().then(() => {
     console.log(`> Ready on http://${hostname}:${port}`);
     console.log(`> Environment: ${dev ? 'development' : 'production'}`);
     
-    // Trigger initialization via Next.js API route after server is ready
-    // This ensures the server is listening and Next.js modules are available
-    setTimeout(() => {
-      // Call the init API route to trigger initialization
-      // This uses Next.js's module system which properly handles TypeScript
-      fetch(`http://localhost:${port}/api/init`)
-        .then(() => {
-          console.log('[Server] ✅ Initialization triggered via API route');
-        })
-        .catch((error) => {
-          // Log but don't crash - initialization will happen when API route is first accessed
-          console.log('[Server] ⚠️  Could not trigger init via API (will initialize on first API call):', error.message);
-        });
-    }, 3000); // Wait 3 seconds after server starts to ensure Next.js is fully ready
+    // Initialization happens automatically when Next.js loads /api/init route
+    // No need to call it manually - the route module auto-initializes on load
+    console.log('[Server] ✅ Server ready - initialization will happen when Next.js loads API routes');
   });
 
   // Handle graceful shutdown
