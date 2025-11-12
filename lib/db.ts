@@ -1,37 +1,11 @@
 import Database from 'better-sqlite3';
 import { resolve } from 'path';
-import { copyFileSync, existsSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync } from 'fs';
 
 // Use DATABASE_PATH env var, or default to data/polymarket.db
 // For production, ensure this path is in a persistent volume
 const dbPath = process.env.DATABASE_PATH || process.env.DB_PATH || resolve(process.cwd(), 'data/polymarket.db');
-const copyPath = resolve(process.cwd(), 'data/polymarket.db.copy');
 let db: Database.Database | null = null;
-let lastCopyTime = 0;
-const COPY_THROTTLE_MS = 2000; // Copy at most once every 2 seconds
-
-function copyDatabaseIfNeeded() {
-  const now = Date.now();
-  // Throttle copies to avoid excessive file I/O
-  if (now - lastCopyTime < COPY_THROTTLE_MS) {
-    return;
-  }
-  
-  try {
-    if (existsSync(dbPath)) {
-      copyFileSync(dbPath, copyPath);
-      lastCopyTime = now;
-      // Only log occasionally to avoid spam
-      if (Math.random() < 0.1) { // 10% chance to log
-        const stats = require('fs').statSync(copyPath);
-        const sizeMB = (stats.size / (1024 * 1024)).toFixed(2);
-        console.log(`[DB] 📋 Database copy updated: ${sizeMB} MB`);
-      }
-    }
-  } catch (error) {
-    // Silently fail to avoid spam in logs
-  }
-}
 
 export function getDb(): Database.Database {
   if (!db) {
@@ -236,7 +210,6 @@ export function insertTokenRegisteredEvent(event: {
     if (Math.random() < 0.01) {
       console.log(`[DB] ✅ Inserted TokenRegistered: conditionId=${event.condition_id.substring(0, 16)}...`);
     }
-    copyDatabaseIfNeeded();
   }
 }
 
@@ -277,7 +250,6 @@ export function insertOrderFilledEvent(event: {
     if (Math.random() < 0.01) {
       console.log(`[DB] ✅ Inserted OrderFilled: orderHash=${event.order_hash.substring(0, 16)}...`);
     }
-    copyDatabaseIfNeeded();
   }
 }
 
@@ -310,7 +282,6 @@ export function insertConditionPreparationEvent(event: {
     if (Math.random() < 0.01) {
       console.log(`[DB] ✅ Inserted ConditionPreparation: conditionId=${event.condition_id.substring(0, 16)}...`);
     }
-    copyDatabaseIfNeeded();
   }
 }
 
@@ -360,7 +331,6 @@ export function insertQuestionInitializedEvent(event: {
     if (Math.random() < 0.02) {
       console.log(`[DB] ✅ Inserted QuestionInitialized: questionId=${event.question_id.substring(0, 16)}..., title="${title.substring(0, 50)}${title.length > 50 ? '...' : ''}"`);
     }
-    copyDatabaseIfNeeded();
   }
 }
 

@@ -185,7 +185,6 @@ http://localhost:3001
 │   ├── init.ts             # Application initialization
 │   ├── polling.ts          # Scheduled data fetching
 │   ├── price-calculator.ts # Price calculation logic
-│   └── db-watcher.ts       # Database file watcher
 ├── docs/                    # Documentation
 │   ├── BITQUERY_QUERIES.md # All Bitquery queries
 │   └── DATA_FLOW.md        # Table relationships

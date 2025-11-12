@@ -138,10 +138,16 @@ function enqueueQuery(
 // Helper function to process and store events
 async function processTokenRegisteredEvents(isInitialSync: boolean = false) {
   const prefix = isInitialSync ? '[Initial Sync]' : '[Polling]';
-  console.log(`\n${prefix} 🪙 Processing TokenRegistered events...`);
+  // Reduced logging - only log start for initial sync
+  if (isInitialSync) {
+    console.log(`${prefix} 🪙 Processing TokenRegistered events...`);
+  }
   try {
     const events = await fetchTokenRegisteredEvents(10000);
-    console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    // Reduced logging - only log if many events
+    if (events.length > 100 || isInitialSync) {
+      console.log(`${prefix} 📦 Processing ${events.length} events...`);
+    }
     let count = 0;
     let skipped = 0;
     for (const event of events) {
