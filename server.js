@@ -46,14 +46,18 @@ app.prepare().then(() => {
     
     // Import init after server is ready to ensure non-blocking initialization
     // This ensures the server is listening before background tasks start
+    // Use setTimeout to defer initialization
     setTimeout(() => {
       try {
-        require('./lib/init');
+        // Try to require the JavaScript version first (for server.js compatibility)
+        require('./lib/init.js');
       } catch (error) {
-        console.error('[Server] ❌ Failed to load init module:', error);
+        // If that fails, log but don't crash - server should still work
+        console.error('[Server] ❌ Failed to load init module:', error.message);
+        console.error('[Server] Stack:', error.stack);
         // Don't exit - server should continue running even if init fails
       }
-    }, 1000); // Wait 1 second after server starts
+    }, 2000); // Wait 2 seconds after server starts to ensure Next.js is fully ready
   });
 
   // Handle graceful shutdown
